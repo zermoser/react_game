@@ -1,0 +1,72 @@
+# ─── Node / Yarn ───────────────────────────────────────────────────────────────
+node_modules/
+dist/
+**/dist/
+build/
+**/build/
+yarn-error.log
+yarn-debug.log*
+.pnp.*
+.cache/
+
+# ─── Vite ─────────────────────────────────────────────────────────────────────
+# (ผลลัพธ์จากการ build ของ Vite)
+.vite/
+
+# ─── Environment ──────────────────────────────────────────────────────────────
+.env
+.env.*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ─── TypeScript ────────────────────────────────────────────────────────────────
+# ถ้าใช้ tsconfig.json แบบมีสร้างไฟล์ .tsbuildinfo
+*.tsbuildinfo
+
+# ─── Editor / OS ───────────────────────────────────────────────────────────────
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# VSCode
+.vscode/
+.history/
+
+# JetBrains IDEs (WebStorm, IntelliJ)
+.idea/
+
+# ─── Logs ───────────────────────────────────────────────────────────────────────
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Misc ──────────────────────────────────────────────────────────────────────
+*.log
+*.lock
+.sass-cache/
+.cache/
+*.tmp
+*.temp
+
+# ─── Tailwind / PostCSS ─────────────────────────────────────────────────────────
+# (มักไม่มีไฟล์ออกมาใน root ยกเว้นคุณตั้งค่าให้ generate)
+public/**/*.css
+public/**/*.map
+
+# ─── GitHub Pages (ถ้าใช้ฟีเจอร์ gh-pages) ────────────────────────────────────
+.gh-pages/
+
+# ─── Coverage (ถ้าใช้ Jest หรือ Testing อื่น ๆ) ─────────────────────────────────
+coverage/
+*.lcov
+
+# ─── OS Generated Files ─────────────────────────────────────────────────────────
+*.swp
+*~
