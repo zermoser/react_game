@@ -30,10 +30,12 @@ const App: React.FC = () => {
 
     // alias เพื่อให้แน่ใจว่าไม่เป็น null ตลอด
     const context = ctx;
-    const canvasElement = canvas;
 
-    // พารามิเตอร์ฉาก
-    const groundY = 180;
+    // พารามิเตอร์ฉาก (ใช้ขนาดเวอร์ชวล 800x240 แต่จะปรากฏบนหน้าจอแบบ responsive โดย CSS)
+    const baseWidth = 800;
+    const baseHeight = 240;
+    const baseGroundY = 180; // ในระบบพิกเซล 800x240
+
     let lastTime = 0;
     let obstacleTimer = 0;
     let nextObstacleDelay = randomDelay();
@@ -45,7 +47,7 @@ const App: React.FC = () => {
     // ref เก็บคะแนนสูงสุดในรอบนี้
     const highestThisRun = { current: highScore };
 
-    // ข้อมูลไดโนเสาร์
+    // ข้อมูลไดโนเสาร์ (ใช้ค่า base จากระบบ 800x240)
     const dino = {
       x: 80,
       y: 0,
@@ -112,19 +114,19 @@ const App: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
 
     function drawBackground() {
-      // ท้องฟ้า
-      context.fillStyle = '#87CEEB';
-      context.fillRect(0, 0, canvasElement.width, groundY + 20);
+      // คำนวณสัดส่วน (scale) ระหว่าง canvas จริงกับ base (800x240)
+      // แต่ since internal resolution เป็น 800x240 อยู่แล้ว จึงวาดตาม base coordinates
+      context.fillStyle = '#87CEEB'; // ท้องฟ้า
+      context.fillRect(0, 0, baseWidth, baseGroundY + 20);
 
-      // พื้นดิน
-      context.fillStyle = '#deb887';
-      context.fillRect(0, groundY, canvasElement.width, canvasElement.height - groundY);
+      context.fillStyle = '#deb887'; // พื้นดิน
+      context.fillRect(0, baseGroundY, baseWidth, baseHeight - baseGroundY);
       context.strokeStyle = '#c2a471';
       context.lineWidth = 2;
-      for (let i = 0; i < canvasElement.width; i += 20) {
+      for (let i = 0; i < baseWidth; i += 20) {
         context.beginPath();
-        context.moveTo(i, groundY);
-        context.lineTo(i + 10, groundY + 10);
+        context.moveTo(i, baseGroundY);
+        context.lineTo(i + 10, baseGroundY + 10);
         context.stroke();
       }
     }
@@ -151,7 +153,7 @@ const App: React.FC = () => {
 
       cloud.x -= (speed * 0.2 * deltaTime) / 1000;
       if (cloud.x + cloud.size * 1.5 < 0) {
-        cloud.x = canvasElement.width + Math.random() * 100;
+        cloud.x = baseWidth + Math.random() * 100;
         cloud.y = 30 + Math.random() * 20;
         cloud.size = 40 + Math.random() * 20;
       }
@@ -168,7 +170,7 @@ const App: React.FC = () => {
       context.fillStyle = '#2e8b57';
       context.fillRect(
         dino.x,
-        groundY - dino.height + dino.y,
+        baseGroundY - dino.height + dino.y,
         dino.width,
         dino.height
       );
@@ -176,15 +178,15 @@ const App: React.FC = () => {
       context.beginPath();
       context.moveTo(
         dino.x + dino.width,
-        groundY - dino.height + dino.y + 10
+        baseGroundY - dino.height + dino.y + 10
       );
       context.lineTo(
         dino.x + dino.width + 10,
-        groundY - dino.height + dino.y + dino.height / 2
+        baseGroundY - dino.height + dino.y + dino.height / 2
       );
       context.lineTo(
         dino.x + dino.width,
-        groundY - dino.height + dino.y + dino.height - 10
+        baseGroundY - dino.height + dino.y + dino.height - 10
       );
       context.closePath();
       context.fill();
@@ -193,7 +195,7 @@ const App: React.FC = () => {
       context.beginPath();
       context.arc(
         dino.x + dino.width * 0.6,
-        groundY - dino.height + dino.y + 10,
+        baseGroundY - dino.height + dino.y + 10,
         3,
         0,
         Math.PI * 2
@@ -204,23 +206,23 @@ const App: React.FC = () => {
     function drawObstacle(obs: Obstacle, deltaTime: number) {
       obs.x -= (speed * deltaTime) / 1000;
       context.fillStyle = '#228B22';
-      context.fillRect(obs.x, groundY - obs.height, obs.width, obs.height);
+      context.fillRect(obs.x, baseGroundY - obs.height, obs.width, obs.height);
       context.fillRect(
         obs.x - 5,
-        groundY - obs.height / 2 - 10,
+        baseGroundY - obs.height / 2 - 10,
         5,
         obs.height / 2
       );
       context.fillRect(
         obs.x + obs.width,
-        groundY - obs.height / 2 - 10,
+        baseGroundY - obs.height / 2 - 10,
         5,
         obs.height / 2
       );
 
       context.strokeStyle = '#006400';
       context.lineWidth = 1;
-      for (let y = groundY - obs.height + 5; y < groundY; y += 10) {
+      for (let y = baseGroundY - obs.height + 5; y < baseGroundY; y += 10) {
         context.beginPath();
         context.moveTo(obs.x + 5, y);
         context.lineTo(obs.x + obs.width - 5, y);
@@ -230,25 +232,25 @@ const App: React.FC = () => {
 
     function drawGameOver() {
       context.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      context.fillRect(0, 0, canvasElement.width, canvasElement.height);
+      context.fillRect(0, 0, baseWidth, baseHeight);
 
       context.fillStyle = '#fff';
       context.font = '30px Arial';
       context.textAlign = 'center';
-      context.fillText('Game Over!', canvasElement.width / 2, canvasElement.height / 2 - 20);
+      context.fillText('Game Over!', baseWidth / 2, baseHeight / 2 - 20);
 
       context.font = '18px Arial';
       context.fillText(
         'Press Space to Restart',
-        canvasElement.width / 2,
-        canvasElement.height / 2 + 20
+        baseWidth / 2,
+        baseHeight / 2 + 20
       );
 
       context.font = '16px Arial';
       context.fillText(
         `High Score: ${highestThisRun.current}`,
-        canvasElement.width / 2,
-        canvasElement.height / 2 + 60
+        baseWidth / 2,
+        baseHeight / 2 + 60
       );
     }
 
@@ -256,7 +258,7 @@ const App: React.FC = () => {
       context.fillStyle = '#000';
       context.font = '20px Arial';
       context.textAlign = 'right';
-      context.fillText(`Score: ${currentScore}`, canvasElement.width - 20, 30);
+      context.fillText(`Score: ${currentScore}`, baseWidth - 20, 30);
     }
 
     function gameLoop(timestamp: number) {
@@ -270,7 +272,7 @@ const App: React.FC = () => {
       const deltaTime = timestamp - lastTime;
       lastTime = timestamp;
 
-      context.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      context.clearRect(0, 0, baseWidth, baseHeight);
 
       drawBackground();
       clouds.forEach((cloud) => drawCloud(cloud, deltaTime));
@@ -280,7 +282,7 @@ const App: React.FC = () => {
       if (obstacleTimer > nextObstacleDelay) {
         const h = 30 + Math.random() * 50;
         obstacles.push({
-          x: canvasElement.width,
+          x: baseWidth,
           width: 15,
           height: h,
           spawnTimestamp: timestamp
@@ -294,13 +296,13 @@ const App: React.FC = () => {
 
         const dinoRect = {
           x: dino.x,
-          y: groundY - dino.height + dino.y,
+          y: baseGroundY - dino.height + dino.y,
           width: dino.width,
           height: dino.height
         };
         const obsRect = {
           x: obs.x,
-          y: groundY - obs.height,
+          y: baseGroundY - obs.height,
           width: obs.width,
           height: obs.height
         };
@@ -347,14 +349,18 @@ const App: React.FC = () => {
       context.fillStyle = '#2e8b57';
       context.fillRect(
         dino.x,
-        groundY - dino.height,
+        baseGroundY - dino.height,
         dino.width,
         dino.height
       );
       context.fillStyle = '#000';
       context.font = '24px Arial';
       context.textAlign = 'center';
-      context.fillText('Press Space to Start', canvasElement.width / 2, canvasElement.height / 2);
+      context.fillText(
+        'Press Space to Start',
+        baseWidth / 2,
+        baseHeight / 2
+      );
     }
 
     resetGame();
@@ -372,12 +378,12 @@ const App: React.FC = () => {
   }, [isRunning, isGameOver, highScore]);
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
+    <div className="flex items-center justify-center h-screen bg-gray-100 p-2">
       <canvas
         ref={canvasRef}
         width={800}
         height={240}
-        className="border border-gray-400 bg-transparent"
+        className="border border-gray-400 w-full max-w-md"
       />
     </div>
   );
