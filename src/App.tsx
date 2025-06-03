@@ -5,6 +5,7 @@ interface Obstacle {
   x: number;
   width: number;
   height: number;
+  spawnTimestamp: number;
 }
 
 interface Cloud {
@@ -15,48 +16,56 @@ interface Cloud {
 
 const App: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // state สำหรับเก็บคะแนนสูงสุดและสถานะเกม
   const [isRunning, setIsRunning] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
-  const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
 
   useEffect(() => {
-    let animationId: number;
-    let frameCount = 0;
-    let spawnRate = 80; // ปรับให้ต้นกระบองเพชรโผล่ถี่ขึ้น
-    let obstacles: Obstacle[] = [];
-    let clouds: Cloud[] = [];
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // alias เพื่อให้แน่ใจว่าไม่เป็น null ตลอด
+    const context = ctx;
+    const canvasElement = canvas;
+
+    // พารามิเตอร์ฉาก
+    const groundY = 180;
+    let lastTime = 0;
+    let obstacleTimer = 0;
+    let nextObstacleDelay = randomDelay();
+    let speed = 200;
+
+    // เก็บคะแนนในรอบนั้น (ไม่ใช้ state ตรง ๆ)
+    let currentScore = 0;
+
+    // ref เก็บคะแนนสูงสุดในรอบนี้
+    const highestThisRun = { current: highScore };
+
+    // ข้อมูลไดโนเสาร์
     const dino = {
       x: 80,
       y: 0,
       width: 30,
       height: 40,
       velocityY: 0,
-      gravity: 1.2
+      gravity: 1000
     };
-    const groundY = 180; // เปลี่ยนให้พื้นดินต่ำลงนิดหนึ่ง
-    let speed = 5;
-    let highestScore = 0;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    let animationId: number;
+    let obstacles: Obstacle[] = [];
+    let clouds: Cloud[] = [];
+    let gameStartTimestamp = 0;
 
-    // สร้างก้อนเมฆเริ่มต้น
-    for (let i = 0; i < 3; i++) {
-      clouds.push({
-        x: 200 + i * 300,
-        y: 30 + Math.random() * 20,
-        size: 40 + Math.random() * 20
-      });
+    function randomDelay() {
+      return 800 + Math.random() * 600;
     }
 
-    const resetGame = () => {
-      frameCount = 0;
-      obstacles = [];
+    function initClouds() {
       clouds = [];
-      // สร้างก้อนเมฆเริ่มต้นใหม่
       for (let i = 0; i < 3; i++) {
         clouds.push({
           x: 200 + i * 300,
@@ -64,26 +73,30 @@ const App: React.FC = () => {
           size: 40 + Math.random() * 20
         });
       }
+    }
+
+    function resetGame() {
+      lastTime = 0;
+      obstacleTimer = 0;
+      nextObstacleDelay = randomDelay();
+      speed = 200;
       dino.y = 0;
       dino.velocityY = 0;
-      setScore(0);
-      speed = 5;
-      spawnRate = 80;
+      currentScore = 0;
       setIsGameOver(false);
-      // เก็บคะแนนสูงถ้าสูงกว่า
-      if (score > highestScore) {
-        highestScore = score;
-        setHighScore(highestScore);
-      }
-    };
+      obstacles = [];
+      initClouds();
+      gameStartTimestamp = 0;
+      highestThisRun.current = highScore;
+    }
 
-    const handleJump = () => {
-      if (dino.y === 0) {
-        dino.velocityY = -20;
+    function handleJump() {
+      if (dino.y >= 0) {
+        dino.velocityY = -450;
       }
-    };
+    }
 
-    const handleKeyDown = (e: KeyboardEvent) => {
+    function handleKeyDown(e: KeyboardEvent) {
       if (e.code === 'Space') {
         if (!isRunning) {
           setIsRunning(true);
@@ -91,165 +104,194 @@ const App: React.FC = () => {
         } else if (!isGameOver) {
           handleJump();
         } else {
-          resetGame();
           setIsRunning(true);
+          resetGame();
         }
       }
-    };
-
+    }
     window.addEventListener('keydown', handleKeyDown);
 
-    const drawBackground = () => {
-      // วาดท้องฟ้าสีฟ้าอ่อน
-      ctx.fillStyle = '#87CEEB';
-      ctx.fillRect(0, 0, canvas.width, groundY + 20);
+    function drawBackground() {
+      // ท้องฟ้า
+      context.fillStyle = '#87CEEB';
+      context.fillRect(0, 0, canvasElement.width, groundY + 20);
 
-      // วาดพื้นดิน (striped pattern)
-      ctx.fillStyle = '#deb887';
-      ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-      ctx.strokeStyle = '#c2a471';
-      ctx.lineWidth = 2;
-      // ลายทางพื้นดิน
-      for (let i = 0; i < canvas.width; i += 20) {
-        ctx.beginPath();
-        ctx.moveTo(i, groundY);
-        ctx.lineTo(i + 10, groundY + 10);
-        ctx.stroke();
+      // พื้นดิน
+      context.fillStyle = '#deb887';
+      context.fillRect(0, groundY, canvasElement.width, canvasElement.height - groundY);
+      context.strokeStyle = '#c2a471';
+      context.lineWidth = 2;
+      for (let i = 0; i < canvasElement.width; i += 20) {
+        context.beginPath();
+        context.moveTo(i, groundY);
+        context.lineTo(i + 10, groundY + 10);
+        context.stroke();
       }
-    };
+    }
 
-    const drawCloud = (cloud: Cloud) => {
-      ctx.fillStyle = 'rgba(255,255,255,0.8)';
-      ctx.beginPath();
-      // วาดกลุ่มวงกลม 3 วงกลมเพื่อให้เป็นก้อนเมฆ
-      ctx.arc(cloud.x, cloud.y, cloud.size * 0.5, 0, Math.PI * 2);
-      ctx.arc(cloud.x + cloud.size * 0.6, cloud.y + 5, cloud.size * 0.4, 0, Math.PI * 2);
-      ctx.arc(cloud.x + cloud.size * 1.2, cloud.y, cloud.size * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-    };
+    function drawCloud(cloud: Cloud, deltaTime: number) {
+      context.fillStyle = 'rgba(255,255,255,0.8)';
+      context.beginPath();
+      context.arc(cloud.x, cloud.y, cloud.size * 0.5, 0, Math.PI * 2);
+      context.arc(
+        cloud.x + cloud.size * 0.6,
+        cloud.y + 5,
+        cloud.size * 0.4,
+        0,
+        Math.PI * 2
+      );
+      context.arc(
+        cloud.x + cloud.size * 1.2,
+        cloud.y,
+        cloud.size * 0.5,
+        0,
+        Math.PI * 2
+      );
+      context.fill();
 
-    const drawDino = () => {
-      // วาดไดโนเสาร์เป็นสี่เหลี่ยมและทำ head เป็นสามเหลี่ยม
-      ctx.fillStyle = '#2e8b57'; // สีเขียวเข้ม
-      // ตัว
-      ctx.fillRect(
+      cloud.x -= (speed * 0.2 * deltaTime) / 1000;
+      if (cloud.x + cloud.size * 1.5 < 0) {
+        cloud.x = canvasElement.width + Math.random() * 100;
+        cloud.y = 30 + Math.random() * 20;
+        cloud.size = 40 + Math.random() * 20;
+      }
+    }
+
+    function drawDino(deltaTime: number) {
+      dino.velocityY += (dino.gravity * deltaTime) / 1000;
+      dino.y = Math.min(dino.y + (dino.velocityY * deltaTime) / 1000, 0);
+      if (dino.y > 0) {
+        dino.y = 0;
+        dino.velocityY = 0;
+      }
+
+      context.fillStyle = '#2e8b57';
+      context.fillRect(
         dino.x,
         groundY - dino.height + dino.y,
         dino.width,
         dino.height
       );
-      // หัว (สามเหลี่ยม)
-      ctx.beginPath();
-      ctx.moveTo(dino.x + dino.width, groundY - dino.height + dino.y + 10);
-      ctx.lineTo(dino.x + dino.width + 10, groundY - dino.height + dino.y + dino.height / 2);
-      ctx.lineTo(dino.x + dino.width, groundY - dino.height + dino.y + dino.height - 10);
-      ctx.closePath();
-      ctx.fill();
-      // ตา (วงกลมเล็ก)
-      ctx.fillStyle = '#000';
-      ctx.beginPath();
-      ctx.arc(
+
+      context.beginPath();
+      context.moveTo(
+        dino.x + dino.width,
+        groundY - dino.height + dino.y + 10
+      );
+      context.lineTo(
+        dino.x + dino.width + 10,
+        groundY - dino.height + dino.y + dino.height / 2
+      );
+      context.lineTo(
+        dino.x + dino.width,
+        groundY - dino.height + dino.y + dino.height - 10
+      );
+      context.closePath();
+      context.fill();
+
+      context.fillStyle = '#000';
+      context.beginPath();
+      context.arc(
         dino.x + dino.width * 0.6,
         groundY - dino.height + dino.y + 10,
         3,
         0,
         Math.PI * 2
       );
-      ctx.fill();
-    };
+      context.fill();
+    }
 
-    const drawObstacle = (obs: Obstacle) => {
-      // วาดต้นกระบองเพชรสีเขียวขนาดต่าง ๆ
-      ctx.fillStyle = '#228B22';
-      // ลำต้นตรงกลาง
-      ctx.fillRect(obs.x, groundY - obs.height, obs.width, obs.height);
-      // วาดกิ่งซ้าย
-      ctx.fillRect(obs.x - 5, groundY - obs.height / 2 - 10, 5, obs.height / 2);
-      // วาดกิ่งขวา
-      ctx.fillRect(obs.x + obs.width, groundY - obs.height / 2 - 10, 5, obs.height / 2);
-      // วาดหนาม (เส้นเล็ก ๆ)
-      ctx.strokeStyle = '#006400';
-      ctx.lineWidth = 1;
+    function drawObstacle(obs: Obstacle, deltaTime: number) {
+      obs.x -= (speed * deltaTime) / 1000;
+      context.fillStyle = '#228B22';
+      context.fillRect(obs.x, groundY - obs.height, obs.width, obs.height);
+      context.fillRect(
+        obs.x - 5,
+        groundY - obs.height / 2 - 10,
+        5,
+        obs.height / 2
+      );
+      context.fillRect(
+        obs.x + obs.width,
+        groundY - obs.height / 2 - 10,
+        5,
+        obs.height / 2
+      );
+
+      context.strokeStyle = '#006400';
+      context.lineWidth = 1;
       for (let y = groundY - obs.height + 5; y < groundY; y += 10) {
-        ctx.beginPath();
-        ctx.moveTo(obs.x + 5, y);
-        ctx.lineTo(obs.x + obs.width - 5, y);
-        ctx.stroke();
+        context.beginPath();
+        context.moveTo(obs.x + 5, y);
+        context.lineTo(obs.x + obs.width - 5, y);
+        context.stroke();
       }
-    };
+    }
 
-    const drawGameOver = () => {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function drawGameOver() {
+      context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      context.fillRect(0, 0, canvasElement.width, canvasElement.height);
 
-      ctx.fillStyle = '#fff';
-      ctx.font = '30px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2 - 20);
+      context.fillStyle = '#fff';
+      context.font = '30px Arial';
+      context.textAlign = 'center';
+      context.fillText('Game Over!', canvasElement.width / 2, canvasElement.height / 2 - 20);
 
-      ctx.font = '18px Arial';
-      ctx.fillText('Press Space to Restart', canvas.width / 2, canvas.height / 2 + 20);
+      context.font = '18px Arial';
+      context.fillText(
+        'Press Space to Restart',
+        canvasElement.width / 2,
+        canvasElement.height / 2 + 20
+      );
 
-      ctx.font = '16px Arial';
-      ctx.fillText(`High Score: ${highScore}`, canvas.width / 2, canvas.height / 2 + 60);
-    };
+      context.font = '16px Arial';
+      context.fillText(
+        `High Score: ${highestThisRun.current}`,
+        canvasElement.width / 2,
+        canvasElement.height / 2 + 60
+      );
+    }
 
-    const drawScore = () => {
-      ctx.fillStyle = '#000';
-      ctx.font = '20px Arial';
-      ctx.textAlign = 'right';
-      ctx.fillText(`Score: ${score}`, canvas.width - 20, 30);
-    };
+    function drawScore() {
+      context.fillStyle = '#000';
+      context.font = '20px Arial';
+      context.textAlign = 'right';
+      context.fillText(`Score: ${currentScore}`, canvasElement.width - 20, 30);
+    }
 
-    const gameLoop = () => {
-      if (!ctx || !canvas) return;
+    function gameLoop(timestamp: number) {
+      if (!isRunning) return;
+
+      // เฟรมแรก: ตั้ง lastTime และ gameStartTimestamp ให้เท่ากับ timestamp (deltaTime = 0)
+      if (!gameStartTimestamp) {
+        gameStartTimestamp = timestamp;
+        lastTime = timestamp;
+      }
+      const deltaTime = timestamp - lastTime;
+      lastTime = timestamp;
+
+      context.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
       drawBackground();
+      clouds.forEach((cloud) => drawCloud(cloud, deltaTime));
+      drawDino(deltaTime);
 
-      // เคลื่อนก้อนเมฆ
-      clouds.forEach((cloud) => {
-        cloud.x -= speed * 0.2; // เมฆเคลื่อนช้ากว่า
-        if (cloud.x + cloud.size * 1.5 < 0) {
-          // สุ่มตำแหน่งเมฆใหม่เมื่อหลุดกรอบ
-          cloud.x = canvas.width + Math.random() * 100;
-          cloud.y = 30 + Math.random() * 20;
-          cloud.size = 40 + Math.random() * 20;
-        }
-        drawCloud(cloud);
-      });
-
-      // ฟิสิกส์ไดโนเสาร์
-      if (isRunning && !isGameOver) {
-        dino.velocityY += dino.gravity;
-        dino.y = Math.min(dino.y + dino.velocityY, 0);
-        if (dino.y > 0) {
-          dino.y = 0;
-          dino.velocityY = 0;
-        }
+      obstacleTimer += deltaTime;
+      if (obstacleTimer > nextObstacleDelay) {
+        const h = 30 + Math.random() * 50;
+        obstacles.push({
+          x: canvasElement.width,
+          width: 15,
+          height: h,
+          spawnTimestamp: timestamp
+        });
+        obstacleTimer = 0;
+        nextObstacleDelay = randomDelay();
       }
 
-      // วาดไดโนเสาร์
-      drawDino();
+      obstacles.forEach((obs, idx) => {
+        drawObstacle(obs, deltaTime);
 
-      // สร้างอุปสรรคใหม่
-      if (isRunning && !isGameOver) {
-        frameCount++;
-        if (frameCount % spawnRate === 0) {
-          const h = 30 + Math.random() * 50;
-          obstacles.push({ x: canvas.width, width: 15, height: h });
-          // ค่อย ๆ ลด spawnRate เพื่อเพิ่มความถี่ตามเกมดำเนิน
-          if (spawnRate > 40) spawnRate -= 2;
-        }
-      }
-
-      // เคลื่อนและวาดอุปสรรค
-      obstacles.forEach((obs, index) => {
-        if (isRunning && !isGameOver) {
-          obs.x -= speed;
-        }
-        drawObstacle(obs);
-
-        // ตรวจการชน
         const dinoRect = {
           x: dino.x,
           y: groundY - dino.height + dino.y,
@@ -272,45 +314,51 @@ const App: React.FC = () => {
           setIsRunning(false);
         }
 
-        // ถ้าอุปสรรคหลุดหน้าจอ
         if (obs.x + obs.width < 0) {
-          obstacles.splice(index, 1);
-          setScore((prev: number) => {
-            const newScore = prev + 1;
-            if (newScore > highestScore) {
-              highestScore = newScore;
-              setHighScore(highestScore);
-            }
-            return newScore;
-          });
+          obstacles.splice(idx, 1);
+          currentScore += 1;
+          if (currentScore > highestThisRun.current) {
+            highestThisRun.current = currentScore;
+          }
         }
       });
 
-      // ปรับความยาก : เพิ่มความเร็วทุก 600 เฟรม
-      if (frameCount % 600 === 0 && frameCount !== 0) {
-        speed += 0.5;
-      }
+      const elapsed = timestamp - gameStartTimestamp;
+      if (elapsed > 10000) speed = 250;
+      if (elapsed > 20000) speed = 300;
 
-      // วาดคะแนน
       drawScore();
 
       if (!isGameOver) {
         animationId = requestAnimationFrame(gameLoop);
       } else {
+        if (highestThisRun.current > highScore) {
+          setHighScore(highestThisRun.current);
+        }
         drawGameOver();
       }
-    };
-
-    // หน้าจอเริ่มต้น
-    if (!isRunning && !isGameOver) {
-      drawBackground();
-      clouds.forEach(drawCloud);
-      drawDino();
-      ctx.fillStyle = '#000';
-      ctx.font = '24px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Press Space to Start', canvas.width / 2, canvas.height / 2);
     }
+
+    function drawStartScreen() {
+      drawBackground();
+      clouds.forEach((cloud) => {
+        drawCloud(cloud, 16);
+      });
+      context.fillStyle = '#2e8b57';
+      context.fillRect(
+        dino.x,
+        groundY - dino.height,
+        dino.width,
+        dino.height
+      );
+      context.fillStyle = '#000';
+      context.font = '24px Arial';
+      context.textAlign = 'center';
+      context.fillText('Press Space to Start', canvasElement.width / 2, canvasElement.height / 2);
+    }
+
+    resetGame();
+    drawStartScreen();
 
     if (isRunning) {
       animationId = requestAnimationFrame(gameLoop);
@@ -320,7 +368,8 @@ const App: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       cancelAnimationFrame(animationId);
     };
-  }, [isRunning, isGameOver, score, highScore]);
+// ตัด currentScore และ highScore ออกจาก dependency array เพราะเราใช้ currentScore ภายใน effect
+  }, [isRunning, isGameOver, highScore]);
 
   return (
     <div className="flex items-center justify-center h-screen bg-gray-100">
