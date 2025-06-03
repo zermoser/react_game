@@ -99,7 +99,7 @@ const App: React.FC = () => {
     }
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.code === 'Space') {
+      if (e.code === 'Space' || e.code === 'ArrowUp') {
         if (!isRunning) {
           setIsRunning(true);
           resetGame();
@@ -111,7 +111,21 @@ const App: React.FC = () => {
         }
       }
     }
+
+    function handleMouseDown() {
+      if (!isRunning) {
+        setIsRunning(true);
+        resetGame();
+      } else if (!isGameOver) {
+        handleJump();
+      } else {
+        setIsRunning(true);
+        resetGame();
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown);
+    canvas.addEventListener('mousedown', handleMouseDown);
 
     function drawBackground() {
       // วาดท้องฟ้าและพื้นดินตาม base coordinates
@@ -240,7 +254,7 @@ const App: React.FC = () => {
 
       context.font = '18px Arial';
       context.fillText(
-        'Press Space to Restart',
+        'Press Space or Click to Restart',
         baseWidth / 2,
         baseHeight / 2 + 20
       );
@@ -356,7 +370,7 @@ const App: React.FC = () => {
       context.font = '24px Arial';
       context.textAlign = 'center';
       context.fillText(
-        'Press Space to Start',
+        'Press Space or Click to Start',
         baseWidth / 2,
         baseHeight / 2
       );
@@ -371,6 +385,7 @@ const App: React.FC = () => {
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      canvas.removeEventListener('mousedown', handleMouseDown);
       cancelAnimationFrame(animationId);
     };
 // ตัด currentScore และ highScore ออกจาก dependency array
