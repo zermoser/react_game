@@ -376,18 +376,16 @@ const App: React.FC = () => {
       }
     }
 
+    // วาดหน้าจอเริ่มต้น—แสดงตัวละครและอุปสรรคสวย ๆ
     function drawStartScreen() {
       drawBackground();
       clouds.forEach((cloud) => {
         drawCloud(cloud, 16);
       });
-      context.fillStyle = '#2e8b57';
-      context.fillRect(
-        dino.x,
-        baseGroundY - dino.height,
-        dino.width,
-        dino.height
-      );
+
+      drawDino(0);
+
+      // ข้อความสตาร์ท
       context.fillStyle = '#000';
       context.font = '24px Arial';
       context.textAlign = 'center';
