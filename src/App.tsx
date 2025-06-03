@@ -48,8 +48,13 @@ const App: React.FC = () => {
       width: 30,
       height: 40,
       velocityY: 0,
-      gravity: 1000
+      gravity: 1000,
     };
+
+    // ตัวแปรสำหรับหมุนขา (ต้นขาเป็นจุดหมุน)
+    let legPhase = 0;
+    const legSpeed = 0.01;            // ค่าเล็กลงเพื่อให้ขาช้าลง
+    const maxLegAngle = Math.PI / 6;   // ประมาณ 30 องศา (PI/6)
 
     let animationId: number;
     let obstacles: Obstacle[] = [];
@@ -66,7 +71,7 @@ const App: React.FC = () => {
         clouds.push({
           x: 200 + i * 300,
           y: 40 + Math.random() * 20,
-          size: 50 + Math.random() * 30
+          size: 50 + Math.random() * 30,
         });
       }
     }
@@ -84,6 +89,7 @@ const App: React.FC = () => {
       initClouds();
       gameStartTimestamp = 0;
       highestThisRun.current = highScore;
+      legPhase = 0; // รีเซ็ต phase ตอนเริ่มใหม่
     }
 
     function handleJump() {
@@ -124,17 +130,9 @@ const App: React.FC = () => {
       context.fillStyle = '#87CEEB';
       context.fillRect(0, 0, baseWidth, baseGroundY + 20);
 
-      // ground
+      // ground (ลบขีดๆ ด้านบนออก)
       context.fillStyle = '#deb887';
       context.fillRect(0, baseGroundY, baseWidth, baseHeight - baseGroundY);
-      context.strokeStyle = '#c2a471';
-      context.lineWidth = 2;
-      for (let i = 0; i < baseWidth; i += 20) {
-        context.beginPath();
-        context.moveTo(i, baseGroundY);
-        context.lineTo(i + 10, baseGroundY + 10);
-        context.stroke();
-      }
     }
 
     // ปรับปรุงก้อนเมฆ
@@ -168,7 +166,7 @@ const App: React.FC = () => {
       context.fill();
     }
 
-    // ปรับปรุงตัวละครหลัก
+    // ปรับปรุงตัวละครหลัก พร้อมหมุนขาแบบ "โค้ง" (30°–45°)
     function drawDino(deltaTime: number) {
       // physics
       dino.velocityY += (dino.gravity * deltaTime) / 1000;
@@ -183,6 +181,12 @@ const App: React.FC = () => {
       const w = dino.width;
       const h = dino.height;
 
+      // อัปเดต phase ของขา
+      legPhase += deltaTime * legSpeed;
+      // angle จะสวิงระหว่าง -maxLegAngle และ +maxLegAngle
+      const angle = Math.sin(legPhase) * maxLegAngle;
+
+      // วาดลำตัวและหัวเหมือนเดิม
       // body (ellipse)
       context.fillStyle = '#228B22';
       context.beginPath();
@@ -201,10 +205,30 @@ const App: React.FC = () => {
       context.quadraticCurveTo(x - 20, y + h * 0.4, x - 5, y + h * 0.2);
       context.fill();
 
-      // legs
+      // วาดขาแบบหมุน (ต้นขาเป็นจุดหมุน)
+      const legWidth = w * 0.2;
+      const legHeight = h * 0.8;
+      // ตำแหน่ง pivot y (บนขา)
+      const pivotY = y + h * 0.8;
+
       context.fillStyle = '#196619';
-      context.fillRect(x + w * 0.2, y + h * 0.8, w * 0.2, h * 0.6);
-      context.fillRect(x + w * 0.6, y + h * 0.8, w * 0.2, h * 0.6);
+
+      // ขาซ้าย: หมุนด้วย angle บวก
+      const leftHipX = x + w * 0.2 + legWidth / 2;
+      context.save();
+      context.translate(leftHipX, pivotY);
+      context.rotate(angle);
+      // วาดขาลากลงมาจาก pivot
+      context.fillRect(-legWidth / 2, 0, legWidth, legHeight);
+      context.restore();
+
+      // ขาขวา: หมุนด้วย angle ลบ (ขาออกคนละทิศทาง)
+      const rightHipX = x + w * 0.6 + legWidth / 2;
+      context.save();
+      context.translate(rightHipX, pivotY);
+      context.rotate(-angle);
+      context.fillRect(-legWidth / 2, 0, legWidth, legHeight);
+      context.restore();
 
       // eye
       context.fillStyle = '#fff';
@@ -320,7 +344,7 @@ const App: React.FC = () => {
           x: baseWidth,
           width: 15,
           height: h,
-          spawnTimestamp: timestamp
+          spawnTimestamp: timestamp,
         });
         obstacleTimer = 0;
         nextObstacleDelay = randomDelay();
@@ -333,13 +357,13 @@ const App: React.FC = () => {
           x: dino.x,
           y: baseGroundY - dino.height + dino.y,
           width: dino.width,
-          height: dino.height
+          height: dino.height,
         };
         const obsRect = {
           x: obs.x,
           y: baseGroundY - obs.height,
           width: obs.width,
-          height: obs.height
+          height: obs.height,
         };
         if (
           dinoRect.x < obsRect.x + obsRect.width &&
@@ -376,7 +400,7 @@ const App: React.FC = () => {
       }
     }
 
-    // วาดหน้าจอเริ่มต้น—แสดงตัวละครและอุปสรรคสวย ๆ
+    // วาดหน้าจอเริ่มต้น—แสดงตัวละครและอุปสรรคสวยงาม
     function drawStartScreen() {
       drawBackground();
       clouds.forEach((cloud) => {
