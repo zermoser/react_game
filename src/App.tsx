@@ -31,10 +31,10 @@ const App: React.FC = () => {
     // alias เพื่อให้แน่ใจว่าไม่เป็น null ตลอด
     const context = ctx;
 
-    // พารามิเตอร์ฉาก (ใช้ขนาดเวอร์ชวล 800x240 แต่จะปรากฏบนหน้าจอแบบ responsive โดย CSS)
+    // พารามิเตอร์ฉาก (internal resolution 800×240)
     const baseWidth = 800;
     const baseHeight = 240;
-    const baseGroundY = 180; // ในระบบพิกเซล 800x240
+    const baseGroundY = 180; // พื้นดินในระบบ 800×240
 
     let lastTime = 0;
     let obstacleTimer = 0;
@@ -47,7 +47,7 @@ const App: React.FC = () => {
     // ref เก็บคะแนนสูงสุดในรอบนี้
     const highestThisRun = { current: highScore };
 
-    // ข้อมูลไดโนเสาร์ (ใช้ค่า base จากระบบ 800x240)
+    // ข้อมูลไดโนเสาร์ (internal coordinates)
     const dino = {
       x: 80,
       y: 0,
@@ -114,12 +114,11 @@ const App: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
 
     function drawBackground() {
-      // คำนวณสัดส่วน (scale) ระหว่าง canvas จริงกับ base (800x240)
-      // แต่ since internal resolution เป็น 800x240 อยู่แล้ว จึงวาดตาม base coordinates
-      context.fillStyle = '#87CEEB'; // ท้องฟ้า
+      // วาดท้องฟ้าและพื้นดินตาม base coordinates
+      context.fillStyle = '#87CEEB';
       context.fillRect(0, 0, baseWidth, baseGroundY + 20);
 
-      context.fillStyle = '#deb887'; // พื้นดิน
+      context.fillStyle = '#deb887';
       context.fillRect(0, baseGroundY, baseWidth, baseHeight - baseGroundY);
       context.strokeStyle = '#c2a471';
       context.lineWidth = 2;
@@ -374,16 +373,16 @@ const App: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       cancelAnimationFrame(animationId);
     };
-// ตัด currentScore และ highScore ออกจาก dependency array เพราะเราใช้ currentScore ภายใน effect
+// ตัด currentScore และ highScore ออกจาก dependency array
   }, [isRunning, isGameOver, highScore]);
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100 p-2">
+    <div className="w-full h-screen bg-gray-100 flex items-center justify-center">
       <canvas
         ref={canvasRef}
         width={800}
         height={240}
-        className="border border-gray-400 w-full max-w-md"
+        className="w-full"
       />
     </div>
   );
