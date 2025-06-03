@@ -28,26 +28,20 @@ const App: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // alias เพื่อให้แน่ใจว่าไม่เป็น null ตลอด
     const context = ctx;
 
     // พารามิเตอร์ฉาก (internal resolution 800×240)
     const baseWidth = 800;
     const baseHeight = 240;
-    const baseGroundY = 180; // พื้นดินในระบบ 800×240
+    const baseGroundY = 180;
 
     let lastTime = 0;
     let obstacleTimer = 0;
     let nextObstacleDelay = randomDelay();
     let speed = 200;
-
-    // เก็บคะแนนในรอบนั้น (ไม่ใช้ state ตรง ๆ)
     let currentScore = 0;
-
-    // ref เก็บคะแนนสูงสุดในรอบนี้
     const highestThisRun = { current: highScore };
 
-    // ข้อมูลไดโนเสาร์ (internal coordinates)
     const dino = {
       x: 80,
       y: 0,
@@ -93,9 +87,7 @@ const App: React.FC = () => {
     }
 
     function handleJump() {
-      if (dino.y >= 0) {
-        dino.velocityY = -450;
-      }
+      if (dino.y >= 0) dino.velocityY = -450;
     }
 
     function handleKeyDown(e: KeyboardEvent) {
@@ -128,10 +120,11 @@ const App: React.FC = () => {
     canvas.addEventListener('mousedown', handleMouseDown);
 
     function drawBackground() {
-      // วาดท้องฟ้าและพื้นดินตาม base coordinates
+      // sky
       context.fillStyle = '#87CEEB';
       context.fillRect(0, 0, baseWidth, baseGroundY + 20);
 
+      // ground
       context.fillStyle = '#deb887';
       context.fillRect(0, baseGroundY, baseWidth, baseHeight - baseGroundY);
       context.strokeStyle = '#c2a471';
@@ -144,9 +137,8 @@ const App: React.FC = () => {
       }
     }
 
-    // ปรับปรุงการวาดก้อนเมฆให้ดูฟุ้งสวยขึ้น
+    // ปรับปรุงก้อนเมฆ
     function drawCloud(cloud: Cloud, deltaTime: number) {
-      // เคลื่อนเมฆ
       cloud.x -= (speed * 0.2 * deltaTime) / 1000;
       if (cloud.x + cloud.size * 2 < 0) {
         cloud.x = baseWidth + Math.random() * 100;
@@ -154,20 +146,21 @@ const App: React.FC = () => {
         cloud.size = 50 + Math.random() * 30;
       }
 
-      // วาดเมฆหลายวงกลมทับกันเพื่อให้ฟุ้ง
       const cx = cloud.x;
       const cy = cloud.y;
       const s = cloud.size;
+
+      // ฟุ้งด้วยหลายวงกลม
       context.fillStyle = 'rgba(255, 255, 255, 0.8)';
       context.beginPath();
-      context.arc(cx, cy, s * 0.5, 0, Math.PI * 2); // main circle
+      context.arc(cx, cy, s * 0.5, 0, Math.PI * 2);
       context.arc(cx + s * 0.4, cy + s * 0.1, s * 0.4, 0, Math.PI * 2);
       context.arc(cx - s * 0.3, cy + s * 0.1, s * 0.4, 0, Math.PI * 2);
       context.arc(cx + s * 0.7, cy + s * 0.2, s * 0.3, 0, Math.PI * 2);
       context.arc(cx - s * 0.6, cy + s * 0.2, s * 0.3, 0, Math.PI * 2);
       context.fill();
 
-      // เพิ่มไฮไลท์สีขาวบางส่วนด้านบน
+      // ไฮไลท์
       context.fillStyle = 'rgba(255, 255, 255, 0.5)';
       context.beginPath();
       context.arc(cx, cy - s * 0.1, s * 0.25, Math.PI, 0);
@@ -175,7 +168,9 @@ const App: React.FC = () => {
       context.fill();
     }
 
+    // ปรับปรุงตัวละครหลัก
     function drawDino(deltaTime: number) {
+      // physics
       dino.velocityY += (dino.gravity * deltaTime) / 1000;
       dino.y = Math.min(dino.y + (dino.velocityY * deltaTime) / 1000, 0);
       if (dino.y > 0) {
@@ -183,66 +178,91 @@ const App: React.FC = () => {
         dino.velocityY = 0;
       }
 
-      context.fillStyle = '#2e8b57';
-      context.fillRect(
-        dino.x,
-        baseGroundY - dino.height + dino.y,
-        dino.width,
-        dino.height
-      );
+      const x = dino.x;
+      const y = baseGroundY - dino.height + dino.y;
+      const w = dino.width;
+      const h = dino.height;
 
+      // body (ellipse)
+      context.fillStyle = '#228B22';
       context.beginPath();
-      context.moveTo(
-        dino.x + dino.width,
-        baseGroundY - dino.height + dino.y + 10
-      );
-      context.lineTo(
-        dino.x + dino.width + 10,
-        baseGroundY - dino.height + dino.y + dino.height / 2
-      );
-      context.lineTo(
-        dino.x + dino.width,
-        baseGroundY - dino.height + dino.y + dino.height - 10
-      );
-      context.closePath();
+      context.ellipse(x + w / 2, y + h / 2, w * 0.8, h * 0.6, 0, 0, Math.PI * 2);
       context.fill();
 
+      // head
+      context.beginPath();
+      context.ellipse(x + w + 8, y + h * 0.4, w * 0.5, h * 0.4, 0, 0, Math.PI * 2);
+      context.fill();
+
+      // tail
+      context.fillStyle = '#196619';
+      context.beginPath();
+      context.moveTo(x - 5, y + h * 0.6);
+      context.quadraticCurveTo(x - 20, y + h * 0.4, x - 5, y + h * 0.2);
+      context.fill();
+
+      // legs
+      context.fillStyle = '#196619';
+      context.fillRect(x + w * 0.2, y + h * 0.8, w * 0.2, h * 0.6);
+      context.fillRect(x + w * 0.6, y + h * 0.8, w * 0.2, h * 0.6);
+
+      // eye
+      context.fillStyle = '#fff';
+      context.beginPath();
+      context.arc(x + w + 8, y + h * 0.3, 5, 0, Math.PI * 2);
+      context.fill();
       context.fillStyle = '#000';
       context.beginPath();
-      context.arc(
-        dino.x + dino.width * 0.6,
-        baseGroundY - dino.height + dino.y + 10,
-        3,
-        0,
-        Math.PI * 2
-      );
+      context.arc(x + w + 10, y + h * 0.3, 2, 0, Math.PI * 2);
       context.fill();
     }
 
+    // ปรับปรุงอุปสรรคเป็นต้นกระบองเพชรสวยงาม
     function drawObstacle(obs: Obstacle, deltaTime: number) {
       obs.x -= (speed * deltaTime) / 1000;
-      context.fillStyle = '#228B22';
-      context.fillRect(obs.x, baseGroundY - obs.height, obs.width, obs.height);
-      context.fillRect(
-        obs.x - 5,
-        baseGroundY - obs.height / 2 - 10,
-        5,
-        obs.height / 2
-      );
-      context.fillRect(
-        obs.x + obs.width,
-        baseGroundY - obs.height / 2 - 10,
-        5,
-        obs.height / 2
-      );
+      const x = obs.x;
+      const h = obs.height;
+      const w = obs.width;
+      const ground = baseGroundY;
 
+      // main cactus body
+      const grd = context.createLinearGradient(x, ground - h, x + w, ground);
+      grd.addColorStop(0, '#32CD32');
+      grd.addColorStop(1, '#228B22');
+      context.fillStyle = grd;
+      context.fillRect(x, ground - h, w, h);
+
+      // left arm
+      context.fillRect(x - w * 0.4, ground - h * 0.6, w * 0.4, h * 0.3);
+      // right arm
+      context.fillRect(x + w, ground - h * 0.5, w * 0.4, h * 0.3);
+
+      // shading stripes
       context.strokeStyle = '#006400';
-      context.lineWidth = 1;
-      for (let y = baseGroundY - obs.height + 5; y < baseGroundY; y += 10) {
+      context.lineWidth = 2;
+      for (let i = ground - h + 10; i < ground; i += 15) {
         context.beginPath();
-        context.moveTo(obs.x + 5, y);
-        context.lineTo(obs.x + obs.width - 5, y);
+        context.moveTo(x + 5, i);
+        context.lineTo(x + w - 5, i);
         context.stroke();
+      }
+
+      // small spines (triangles)
+      context.fillStyle = '#006400';
+      for (let i = ground - h + 15; i < ground; i += 30) {
+        context.beginPath();
+        context.moveTo(x + 5, i);
+        context.lineTo(x + 10, i - 5);
+        context.lineTo(x + 15, i);
+        context.closePath();
+        context.fill();
+
+        context.beginPath();
+        context.moveTo(x + w - 5, i);
+        context.lineTo(x + w - 10, i - 5);
+        context.lineTo(x + w - 15, i);
+        context.closePath();
+        context.fill();
       }
     }
 
@@ -280,7 +300,6 @@ const App: React.FC = () => {
     function gameLoop(timestamp: number) {
       if (!isRunning) return;
 
-      // เฟรมแรก: ตั้ง lastTime และ gameStartTimestamp ให้เท่ากับ timestamp (deltaTime = 0)
       if (!gameStartTimestamp) {
         gameStartTimestamp = timestamp;
         lastTime = timestamp;
@@ -391,17 +410,11 @@ const App: React.FC = () => {
       canvas.removeEventListener('mousedown', handleMouseDown);
       cancelAnimationFrame(animationId);
     };
-// ตัด currentScore และ highScore ออกจาก dependency array
   }, [isRunning, isGameOver, highScore]);
 
   return (
     <div className="w-full h-screen bg-gray-100 flex items-center justify-center">
-      <canvas
-        ref={canvasRef}
-        width={800}
-        height={240}
-        className="w-full"
-      />
+      <canvas ref={canvasRef} width={800} height={240} className="w-full" />
     </div>
   );
 };
