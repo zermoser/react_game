@@ -71,8 +71,8 @@ const App: React.FC = () => {
       for (let i = 0; i < 3; i++) {
         clouds.push({
           x: 200 + i * 300,
-          y: 30 + Math.random() * 20,
-          size: 40 + Math.random() * 20
+          y: 40 + Math.random() * 20,
+          size: 50 + Math.random() * 30
         });
       }
     }
@@ -144,32 +144,35 @@ const App: React.FC = () => {
       }
     }
 
+    // ปรับปรุงการวาดก้อนเมฆให้ดูฟุ้งสวยขึ้น
     function drawCloud(cloud: Cloud, deltaTime: number) {
-      context.fillStyle = 'rgba(255,255,255,0.8)';
+      // เคลื่อนเมฆ
+      cloud.x -= (speed * 0.2 * deltaTime) / 1000;
+      if (cloud.x + cloud.size * 2 < 0) {
+        cloud.x = baseWidth + Math.random() * 100;
+        cloud.y = 40 + Math.random() * 20;
+        cloud.size = 50 + Math.random() * 30;
+      }
+
+      // วาดเมฆหลายวงกลมทับกันเพื่อให้ฟุ้ง
+      const cx = cloud.x;
+      const cy = cloud.y;
+      const s = cloud.size;
+      context.fillStyle = 'rgba(255, 255, 255, 0.8)';
       context.beginPath();
-      context.arc(cloud.x, cloud.y, cloud.size * 0.5, 0, Math.PI * 2);
-      context.arc(
-        cloud.x + cloud.size * 0.6,
-        cloud.y + 5,
-        cloud.size * 0.4,
-        0,
-        Math.PI * 2
-      );
-      context.arc(
-        cloud.x + cloud.size * 1.2,
-        cloud.y,
-        cloud.size * 0.5,
-        0,
-        Math.PI * 2
-      );
+      context.arc(cx, cy, s * 0.5, 0, Math.PI * 2); // main circle
+      context.arc(cx + s * 0.4, cy + s * 0.1, s * 0.4, 0, Math.PI * 2);
+      context.arc(cx - s * 0.3, cy + s * 0.1, s * 0.4, 0, Math.PI * 2);
+      context.arc(cx + s * 0.7, cy + s * 0.2, s * 0.3, 0, Math.PI * 2);
+      context.arc(cx - s * 0.6, cy + s * 0.2, s * 0.3, 0, Math.PI * 2);
       context.fill();
 
-      cloud.x -= (speed * 0.2 * deltaTime) / 1000;
-      if (cloud.x + cloud.size * 1.5 < 0) {
-        cloud.x = baseWidth + Math.random() * 100;
-        cloud.y = 30 + Math.random() * 20;
-        cloud.size = 40 + Math.random() * 20;
-      }
+      // เพิ่มไฮไลท์สีขาวบางส่วนด้านบน
+      context.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      context.beginPath();
+      context.arc(cx, cy - s * 0.1, s * 0.25, Math.PI, 0);
+      context.closePath();
+      context.fill();
     }
 
     function drawDino(deltaTime: number) {
